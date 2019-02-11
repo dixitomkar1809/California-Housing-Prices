@@ -7,18 +7,21 @@ library(plotly)
 library(IRdisplay)
 library(MASS)
 library(ISLR)
+library(Metrics)
 require(corrplot)
 
 # Read the data 
+#housing <- read.csv('../input/housing.csv')
 housing = read.csv('./Data/housing.csv')
 nrow(housing)
+
 # Making Sure that the data isn't weird
 head(housing)
 
 # Lets check the summary of the data
 summary(housing)
 
-par(mfrow=c(1,1))
+par(mfrow=c(3,3))
 hist(housing$longitude, main = "Longitude", xlab = "Longitude", ylab = "Count", col = "darkgray")
 hist(housing$latitude, main = "latitude", xlab = "latitude", ylab = "Count", col = "darkgray")
 hist(housing$housing_median_age, main = "housing_median_age", xlab = "housing_median_age", ylab = "Count", col = "darkgray")
@@ -31,7 +34,6 @@ hist(housing$median_house_value, main = "median_house_value", xlab = "median_hou
 
 # Now from the histograms we can see that:
 # There are some houses with old age homes in them
-# We need to standardize the scale of the data since the range is very weird some for 0-10 and some range to 500,000
 
 # Since we saw that the total_bedrooms had a lot of NA's, we will fill them with median because using mean would be volatile because mean is affected more by the outliers
 housing$total_bedrooms[is.na(housing$total_bedrooms)] <- median(housing$total_bedrooms, na.rm=TRUE)
@@ -66,6 +68,7 @@ for (i in 1:nrow(housing)){
 housing$ocean_proximity <- NULL
 
 colnames(housing)
+
 # Lets use scatter plot to check what predicting variables have a linear relationship with median_house_value
 par(mfrow=c(3,3))
 plot(x=housing$longitude, y=housing$median_house_value, xlab="Longitude", ylab="Median House Value", main="Longitude VS Median House Value")
@@ -102,10 +105,6 @@ boxplot(housing$ISLAND, xlab="Boxplot (Ocean Proximity - Island)")
 
 # The data has a lot of outliers 
 
-# as we can see that there are NA values in total_bedrooms
-# we can also split the ocean_proximity column into separate columns with boolean data 
-# here we can replace the na values in total bedrooms with the median as it wont be affected by the outliers
-
 # Now it is very useful to find correlation between variables and see how they are correlated to each other and to the output variable
 # We take correlation plot to do the heavy lifting for use i.e correlation of one with all other
 # The color here will indicate the correlation
@@ -122,7 +121,7 @@ lm1.fit
 summary(lm1.fit)
 names(lm1.fit)
 confint(lm1.fit)
-plot(housing$median_income, housing$median_house_value)
+plot(housing$median_income, housing$median_house_value, xlab = "Median Income (Housing Data)", ylab="Median House Value (Housing Data)")
 abline(lm1.fit, lwd=3, col="red")
 
 # This will be used as to calculate sample size what is 75% for now to use it as training Data and rest as testing Data
@@ -139,9 +138,15 @@ trainData <- housing[trainIndices,]
 
 # All the ones excluding the ones in trainIndices are stored as testing Data
 testData <- housing[-trainIndices, ]
-
+  
 lm2.fit <- lm(median_house_value ~ median_income, data=trainData)
 lm2.fit
-predict(lm2.fit, testData)
-plot(testData$median_income, testData$median_house_value)
+summary(lm2.fit)
+preds <- predict(lm2.fit, testData)
+mse <- mse(housing$median_house_value, preds)
+root_mse <- sqrt(mse)
+plot(testData$median_income, testData$median_house_value, xlab = "Median Income (Test Data)", ylab = "Median House Value (Test Data)")
 abline(lm2.fit, lwd=3, col="red")
+hist(testData$median_house_value, ylim = c(0, 2000), col = rgb(1,1,0,0.7), main = "Overlapping Histograms (Original and Predicted)")
+hist(preds,col=rgb(0,1,1,0.4), add=T)
+
